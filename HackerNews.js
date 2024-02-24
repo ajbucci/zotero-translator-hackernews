@@ -48,7 +48,7 @@ async function doWeb(doc, url) {
 	await scrape(doc, url, newItem);
 	// Find the first link within the "titleline" span and scrape its content too
 	var linkedUrl = doc.querySelector('span.titleline > a').href;
-	if (linkedUrl) {
+	if (linkedUrl && linkedUrl != url) {
 		await scrape(await requestDocument(linkedUrl), linkedUrl, newItem);
 	}
 	newItem.complete();
