@@ -9,7 +9,7 @@
 	"inRepository": true,
 	"translatorType": 4,
 	"browserSupport": "gcsibv",
-	"lastUpdated": "2024-02-24 20:02:41"
+	"lastUpdated": "2024-02-28 19:06:32"
 }
 
 function detectWeb(doc, url) {
@@ -27,7 +27,6 @@ async function doWeb(doc, url) {
 	if (linkedUrl && linkedUrl != url) {
 		await scrape(doc, linkedUrl, newItem);
 	}
-	newItem.complete();
 }
 
 async function scrape(doc, url, newItem) {
@@ -37,9 +36,28 @@ async function scrape(doc, url, newItem) {
 			mimeType: "application/pdf",
 			url: url
 		})
+		newItem.complete();
 	} else {
 		if (url != newItem.url) {
 			doc = await requestDocument(url);
+			// use the linked page to fill out the Author etc.
+			var translator = Zotero.loadTranslator('web');
+			translator.setHandler('itemDone', function(obj, translatedItem) {
+				if (translatedItem.creators && translatedItem.creators.length) {
+					newItem.creators.push(translatedItem.creators[0]);
+				}
+				newItem.date = translatedItem.date;				
+				newItem.seeAlso.push(url);
+				newItem.complete();
+			});
+			translator.setHandler('translators', function(obj, translators) {
+				if (translators.length) {
+					translator.setTranslator(translators);
+					translator.translate();
+				}
+			});
+			translator.setDocument(doc);
+			translator.getTranslators();
 		}
 		newItem.attachments.push({
 			title: "Snapshot: " + (doc.title || 'No Title Found'),
@@ -47,8 +65,67 @@ async function scrape(doc, url, newItem) {
 		});
 	}
 }
-
 /** BEGIN TEST CASES **/
 var testCases = [
+	{
+		"type": "web",
+		"url": "https://news.ycombinator.com/item?id=39358317",
+		"detectedItemType": true,
+		"items": [
+			{
+				"itemType": "webpage",
+				"title": "Mastering Programming (2016) | Hacker News",
+				"creators": [
+					{
+						"firstName": "Kent",
+						"lastName": "Beck",
+						"creatorType": "author"
+					}
+				],
+				"url": "https://news.ycombinator.com/item?id=39358317",
+				"attachments": [
+					{
+						"title": "Snapshot: Mastering Programming (2016) | Hacker News",
+						"mimeType": "text/html"
+					},
+					{
+						"title": "Snapshot: Mastering Programming - by Kent Beck",
+						"mimeType": "text/html"
+					}
+				],
+				"tags": [],
+				"notes": [],
+				"seeAlso": [
+					"https://tidyfirst.substack.com/p/mastering-programming"
+				]
+			}
+		]
+	},
+	{
+		"type": "web",
+		"url": "https://news.ycombinator.com/item?id=39472693",
+		"detectedItemType": true,
+		"items": [
+			{
+				"itemType": "webpage",
+				"title": "Nobody ever gets credit for fixing problems that never happened (2001) [pdf] | Hacker News",
+				"creators": [],
+				"url": "https://news.ycombinator.com/item?id=39472693",
+				"attachments": [
+					{
+						"title": "Snapshot: Nobody ever gets credit for fixing problems that never happened (2001) [pdf] | Hacker News",
+						"mimeType": "text/html"
+					},
+					{
+						"title": "PDF: Nobody ever gets credit for fixing problems that never happened (2001) [pdf] | Hacker News",
+						"mimeType": "application/pdf"
+					}
+				],
+				"tags": [],
+				"notes": [],
+				"seeAlso": []
+			}
+		]
+	}
 ]
 /** END TEST CASES **/
